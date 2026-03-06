@@ -2,27 +2,94 @@
 import { Box, Typography, Card, TextField, Button, Select, MenuItem, ToggleButton, ToggleButtonGroup, CircularProgress } from "@mui/material"
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
 
-export const JobSelection = ({ setJobMatches }: { setJobMatches: (value: boolean) => void }) => {
-    const [jobType, setJobType] = useState<string[]>([]);
+interface JobSelectionForm {
+    resume: string;
+    jobTitle: string;
+    location: string;
+    jobType: string[];
+}
+
+export interface JobMatchesData {
+    threadId: string;
+    isAvailable: boolean;
+    rankedJobs: any[];
+}
+
+export const JobSelection = ({ setJobMatches }: { setJobMatches: (value: JobMatchesData) => void }) => {
     const [showProgress, setShowProgress] = useState(false);
 
-    const handleJobTypeChange = (
-        event: React.MouseEvent<HTMLElement>,
-        newJobType: string[],
-    ) => {
-        setJobType(newJobType);
+    const { control, handleSubmit, formState: { errors } } = useForm<JobSelectionForm>({
+        defaultValues: {
+            resume: '',
+            jobTitle: '',
+            location: '',
+            jobType: []
+        }
+    });
+
+    const onSubmit = async (data: JobSelectionForm) => {
+        console.log('Form data:', data);
+        setShowProgress(true);
+
+        try {
+            const requestBody = { 
+                resumeText: data.resume, 
+                job: data.jobTitle, 
+                jobType: data.jobType[0], 
+                jobLocation: data.location 
+            };
+
+            const response = await fetch('/ai-agent', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to process request');
+            }
+
+            const result = await response.json();
+            console.log('Agent response:', result);
+            if (result?.threadId) {
+                const pollAgentStatus = async () => {
+                    const getAgentStatus = await fetch(`/ai-agent?threadId=${result.threadId}`);
+                    const agentStatus = await getAgentStatus.json();
+                    console.log('Agent status:', agentStatus);
+                    
+                    if (agentStatus?.status === 'waiting_for_input') {
+                        setJobMatches({
+                            threadId: result.threadId,
+                            isAvailable: true,
+                            rankedJobs: agentStatus.data?.rankedJobs
+                        });
+                        setShowProgress(false);
+                        return true;
+                    }
+                    return false;
+                };
+
+                const intervalId = setInterval(async () => {
+                    const isDone = await pollAgentStatus();
+                    if (isDone) {
+                        clearInterval(intervalId);
+                    }
+                }, 3000);
+
+                await pollAgentStatus();
+            }
+
+            // setJobMatches(true);
+            // setShowProgress(false);
+        } catch (error) {
+            console.error('Error calling agent:', error);
+            setShowProgress(false);
+        }
     };
-
-    const findMatchingJobs = () => {
-        setShowProgress(true)
-
-        setTimeout(() => {
-            setJobMatches(true)
-            setShowProgress(false)
-
-        }, 5000);
-    }
 
     return (
         <Box className="flex items-center justify-center w-screen mt-10">
@@ -33,107 +100,143 @@ export const JobSelection = ({ setJobMatches }: { setJobMatches: (value: boolean
                         <Typography variant="body2" color="text.secondary">Get personalized job matches</Typography>
                     </Box>
 
-                    <Box className="flex flex-col gap-4">
+                    <Box component="form" onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
                         <Box className="flex flex-col gap-2">
                             <Typography variant="body2" fontWeight="600">Paste Resume</Typography>
-                            <TextField
-                                multiline
-                                rows={8}
-                                placeholder="Drag & drop PDF or paste text"
-                                variant="outlined"
-                                fullWidth
+                            <Controller
+                                name="resume"
+                                control={control}
+                                rules={{ required: 'Resume is required' }}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        multiline
+                                        rows={8}
+                                        placeholder="Drag & drop PDF or paste text"
+                                        variant="outlined"
+                                        fullWidth
+                                        error={!!errors.resume}
+                                        helperText={errors.resume?.message}
+                                    />
+                                )}
                             />
                         </Box>
 
                         <Box className="flex flex-col gap-2">
                             <Typography variant="body2" fontWeight="600">Job Title</Typography>
-                            <TextField
-                                placeholder="e.g. Senior Software Engineer"
-                                variant="outlined"
-                                fullWidth
+                            <Controller
+                                name="jobTitle"
+                                control={control}
+                                rules={{ required: 'Job title is required' }}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        placeholder="e.g. Senior Software Engineer"
+                                        variant="outlined"
+                                        fullWidth
+                                        error={!!errors.jobTitle}
+                                        helperText={errors.jobTitle?.message}
+                                    />
+                                )}
                             />
                         </Box>
 
                         <Box className="flex flex-col gap-2">
                             <Typography variant="body2" fontWeight="600">Location</Typography>
-                            <TextField
-                                placeholder="e.g. San Francisco, CA"
-                                variant="outlined"
-                                fullWidth
+                            <Controller
+                                name="location"
+                                control={control}
+                                rules={{ required: 'Location is required' }}
+                                render={({ field }) => (
+                                    <TextField
+                                        {...field}
+                                        placeholder="e.g. San Francisco, CA"
+                                        variant="outlined"
+                                        fullWidth
+                                        error={!!errors.location}
+                                        helperText={errors.location?.message}
+                                    />
+                                )}
                             />
                         </Box>
 
                         <Box className="flex flex-col gap-2">
                             <Typography variant="body2" fontWeight="600">Job Type</Typography>
-                            <ToggleButtonGroup
-                                value={jobType}
-                                onChange={handleJobTypeChange}
-                                aria-label="job type"
-                                fullWidth
-                            >
-                                <ToggleButton
-                                    value="full-time"
-                                    sx={{
-                                        '&.Mui-selected': {
-                                            backgroundColor: '#2563EB',
-                                            color: 'white',
-                                            '&:hover': {
-                                                backgroundColor: '#1d4ed8',
-                                            }
-                                        }
-                                    }}
-                                >
-                                    Full-time
-                                </ToggleButton>
-                                <ToggleButton
-                                    value="remote"
-                                    sx={{
-                                        '&.Mui-selected': {
-                                            backgroundColor: '#2563EB',
-                                            color: 'white',
-                                            '&:hover': {
-                                                backgroundColor: '#1d4ed8',
-                                            }
-                                        }
-                                    }}
-                                >
-                                    Remote
-                                </ToggleButton>
-                                <ToggleButton
-                                    value="contract"
-                                    sx={{
-                                        '&.Mui-selected': {
-                                            backgroundColor: '#2563EB',
-                                            color: 'white',
-                                            '&:hover': {
-                                                backgroundColor: '#1d4ed8',
-                                            }
-                                        }
-                                    }}
-                                >
-                                    Internship
-                                </ToggleButton>
-                            </ToggleButtonGroup>
+                            <Controller
+                                name="jobType"
+                                control={control}
+                                render={({ field }) => (
+                                    <ToggleButtonGroup
+                                        {...field}
+                                        onChange={(_, value) => field.onChange(value)}
+                                        aria-label="job type"
+                                        fullWidth
+                                    >
+                                        <ToggleButton
+                                            value="full-time"
+                                            sx={{
+                                                '&.Mui-selected': {
+                                                    backgroundColor: '#2563EB',
+                                                    color: 'white',
+                                                    '&:hover': {
+                                                        backgroundColor: '#1d4ed8',
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            Full-time
+                                        </ToggleButton>
+                                        <ToggleButton
+                                            value="remote"
+                                            sx={{
+                                                '&.Mui-selected': {
+                                                    backgroundColor: '#2563EB',
+                                                    color: 'white',
+                                                    '&:hover': {
+                                                        backgroundColor: '#1d4ed8',
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            Remote
+                                        </ToggleButton>
+                                        <ToggleButton
+                                            value="contract"
+                                            sx={{
+                                                '&.Mui-selected': {
+                                                    backgroundColor: '#2563EB',
+                                                    color: 'white',
+                                                    '&:hover': {
+                                                        backgroundColor: '#1d4ed8',
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            Contract
+                                        </ToggleButton>
+                                    </ToggleButtonGroup>
+                                )}
+                            />
                         </Box>
-                    </Box>
 
-                    {!showProgress && <Button
-                        variant="contained"
-                        size="large"
-                        endIcon={<ArrowForwardIcon />}
-                        sx={{
-                            backgroundColor: '#2563EB',
-                            textTransform: 'none',
-                            '&:hover': {
-                                backgroundColor: '#1e40af'
-                            }
-                        }}
-                        fullWidth
-                        onClick={findMatchingJobs}
-                    >
-                        Find Matching Jobs
-                    </Button>}
-                    {showProgress && <CircularProgress />}
+                        {!showProgress && <Button
+                            type="submit"
+                            variant="contained"
+                            size="large"
+                            endIcon={<ArrowForwardIcon />}
+                            sx={{
+                                backgroundColor: '#2563EB',
+                                textTransform: 'none',
+                                '&:hover': {
+                                    backgroundColor: '#1e40af'
+                                }
+                            }}
+                            fullWidth
+                        >
+                            Find Matching Jobs
+                        </Button>}
+                        {showProgress && <CircularProgress />}
+                    </Box>
                 </Box>
             </Card>
         </Box>

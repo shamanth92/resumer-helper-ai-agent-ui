@@ -5,6 +5,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import { JobDetailsDialog } from './jobDetailsDialog';
 import { useState } from 'react';
 import { TailorResume } from "./TailorResume";
+import { Watch } from "react-loader-spinner";
 
 interface Job {
     id: string;
@@ -19,88 +20,24 @@ interface Job {
     requirements: string[];
 }
 
-const jobData: Job[] = [
-    {
-        id: '1',
-        title: 'Senior Software Engineer',
-        company: 'TechCorp Inc.',
-        location: 'San Francisco, CA',
-        jobType: 'Full-time',
-        matchPercentage: 78.5,
-        icon: '💼',
-        description: "We're seeking a Senior Software Engineer to lead scalable web applications and mentor senior developers...",
-        responsibilities: [
-            'Lead product development',
-            'Architect scalable solutions',
-            'Mentor engineering team',
-            'Collaborate with cross-functional teams'
-        ],
-        requirements: [
-            '5+ years of software development experience',
-            'Strong knowledge of React, Node.js, and TypeScript',
-            'Experience with cloud platforms (AWS/GCP)',
-            'Excellent communication skills'
-        ]
-    },
-    {
-        id: '2',
-        title: 'Frontend Developer',
-        company: 'InnovateX',
-        location: 'Remote',
-        jobType: 'Full-time',
-        matchPercentage: 92.1,
-        icon: '⚡',
-        description: "Join our team to build cutting-edge user interfaces for our SaaS platform. Work remotely with a talented team...",
-        responsibilities: [
-            'Build responsive web applications',
-            'Implement modern UI/UX designs',
-            'Optimize application performance',
-            'Write clean, maintainable code'
-        ],
-        requirements: [
-            '3+ years of frontend development',
-            'Expert in React and modern JavaScript',
-            'Experience with CSS frameworks',
-            'Strong attention to detail'
-        ]
-    },
-    {
-        id: '3',
-        title: 'Staff Software Engineer',
-        company: 'DataSys',
-        location: 'San Francisco, CA',
-        jobType: 'Full-time',
-        matchPercentage: 56.1,
-        icon: '🔷',
-        description: "Lead technical initiatives and drive architectural decisions for our data platform. Work with large-scale systems...",
-        responsibilities: [
-            'Design system architecture',
-            'Lead technical initiatives',
-            'Code review and mentorship',
-            'Define engineering best practices'
-        ],
-        requirements: [
-            '8+ years of software engineering',
-            'Experience with distributed systems',
-            'Strong problem-solving skills',
-            'Leadership experience'
-        ]
-    }
-];
-
-export const JobMatches = () => {
+export const JobMatches = ({ rankedJobs, threadId }: { rankedJobs: any[], threadId: string }) => {
     const [selectedJob, setSelectedJob] = useState<Job | null>(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [jobSelected, setJobSelected] = useState(false)
+    const [selectedJobIndex, setSelectedJobIndex] = useState<number>(0)
+    const [showSpinner, setShowSpinner] = useState(true)
+
 
     const getMatchColor = (percentage: number) => {
-        if (percentage >= 60) return { bg: '#dcfce7', text: '#16a34a' }; // green
-        if (percentage >= 50) return { bg: '#fef9c3', text: '#ca8a04' }; // yellow
+        console.log('percentage: ', percentage, typeof percentage)
+        if (percentage >= 50) return { bg: '#dcfce7', text: '#16a34a' }; // green
+        if (percentage >= 40) return { bg: '#fef9c3', text: '#ca8a04' }; // yellow
         return { bg: '#fed7aa', text: '#ea580c' }; // orange
     };
 
-    const handleViewDetails = (job: Job) => {
+    const handleViewDetails = (job: Job, index: number) => {
         setSelectedJob(job);
+        setSelectedJobIndex(index);
         setDialogOpen(true);
     };
 
@@ -108,12 +45,49 @@ export const JobMatches = () => {
         setDialogOpen(false);
     };
 
-    const moveToTailorResume = () => {
+    const moveToTailorResume = async (threadId: string) => {
         setJobSelected(true)
+        setShowSpinner(true)
+        if (threadId) {
+            const pollAgentStatus = async () => {
+                const getAgentStatus = await fetch(`/ai-agent?threadId=${threadId}`);
+                const agentStatus = await getAgentStatus.json();
+                console.log('Agent status:', agentStatus);
+
+                if (agentStatus?.status === 'completed') {
+                    setShowSpinner(false);
+                    return true;
+                }
+                return false;
+            };
+
+            const intervalId = setInterval(async () => {
+                const isDone = await pollAgentStatus();
+                if (isDone) {
+                    clearInterval(intervalId);
+                }
+            }, 3000);
+
+            await pollAgentStatus();
+        }
     }
 
     return (
-        jobSelected ? <TailorResume /> : <Box className="flex items-center justify-center w-screen mt-10 mb-10">
+        jobSelected ? (showSpinner ? <Box className="flex flex-col items-center gap-2 justify-center" sx={{ height: 'calc(100vh - 80px)' }}>
+                    <Watch
+                        visible={true}
+                        height="80"
+                        width="80"
+                        radius="48"
+                        color="#2563EB"
+                        ariaLabel="watch-loading"
+                        wrapperStyle={{}}
+                        wrapperClass=""
+                    />
+                    <Typography variant="body2" color="text.secondary">
+                        Tailoring your resume...
+                    </Typography>
+                </Box> : <TailorResume />) : <Box className="flex items-center justify-center w-screen mt-10 mb-10">
             <Box className="w-[400px]">
                 <Box className="mb-6">
                     <Typography variant="h5" fontWeight="bold">Top Job Matches</Typography>
@@ -123,25 +97,31 @@ export const JobMatches = () => {
                 </Box>
 
                 <Box className="flex flex-col gap-8">
-                    {jobData.map((job) => (
-                        <Card key={job.id} className="p-4 shadow-md">
+                    {rankedJobs.map((job: any, i: number) => (
+                        <Card key={job.job_id} className="p-4 shadow-md">
                             <Box className="flex flex-col gap-3">
                                 <Box className="flex items-start gap-3">
-                                    <Box className="text-3xl">{job.icon}</Box>
+                                    <Box className="w-12 h-12 flex items-center justify-center">
+                                        <img
+                                            src={job.employer_logo}
+                                            alt={job.employer_name}
+                                            className="w-full h-full object-contain"
+                                        />
+                                    </Box>
                                     <Box className="flex-1">
                                         <Typography variant="h6" fontWeight="bold">
-                                            {job.title}
+                                            {job.job_title}
                                         </Typography>
                                         <Box className="flex items-center gap-1 mt-1">
                                             <BusinessIcon fontSize="small" className="text-gray-600" />
                                             <Typography variant="body2" color="text.secondary">
-                                                {job.company}
+                                                {job.employer_name}
                                             </Typography>
                                         </Box>
                                         <Box className="flex items-center gap-1 mt-1">
                                             <LocationOnIcon fontSize="small" className="text-gray-600" />
                                             <Typography variant="body2" color="text.secondary">
-                                                {job.location} • {job.jobType}
+                                                {job.job_location} • {job.job_employment_types[0]}
                                             </Typography>
                                         </Box>
                                     </Box>
@@ -149,17 +129,17 @@ export const JobMatches = () => {
 
                                 <Box className="flex items-center justify-between mt-3">
                                     <Chip
-                                        label={`${job.matchPercentage}% Match`}
+                                        label={`${(job.similarity * 100).toFixed(0)}% Match`}
                                         size="medium"
                                         sx={{
-                                            backgroundColor: getMatchColor(job.matchPercentage).bg,
-                                            color: getMatchColor(job.matchPercentage).text,
+                                            backgroundColor: getMatchColor(job.similarity * 100).bg,
+                                            color: getMatchColor(job.similarity * 100).text,
                                             fontWeight: 'bold'
                                         }}
                                     />
                                     <Button
                                         variant="contained"
-                                        onClick={() => handleViewDetails(job)}
+                                        onClick={() => handleViewDetails(job, i)}
                                         sx={{
                                             backgroundColor: '#2563EB',
                                             textTransform: 'none',
@@ -183,8 +163,10 @@ export const JobMatches = () => {
                     onClose={handleCloseDialog}
                     job={selectedJob}
                     userJobSelected={moveToTailorResume}
+                    threadId={threadId}
+                    selectedJobIndex={selectedJobIndex}
                 />
             )}
         </Box>
-    );
+        );
 };

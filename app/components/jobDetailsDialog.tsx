@@ -7,33 +7,52 @@ import { useState } from 'react';
 interface JobDetailsDialogProps {
     open: boolean;
     onClose: () => void;
-    job: {
-        title: string;
-        company: string;
-        location: string;
-        icon: string;
-        description: string;
-        responsibilities: string[];
-        requirements: string[];
-    };
-    userJobSelected: () => void
+    job: any;
+    userJobSelected: (threadId: string) => void;
+    threadId: string;
+    selectedJobIndex: number;
 }
 
-export const JobDetailsDialog = ({ open, onClose, job, userJobSelected }: JobDetailsDialogProps) => {
+export const JobDetailsDialog = ({ open, onClose, job, userJobSelected, threadId, selectedJobIndex }: JobDetailsDialogProps) => {
     const [selectedTab, setSelectedTab] = useState(0);
 
     const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
         setSelectedTab(newValue);
     };
 
-    const tailorResume = () => {
+    const tailorResume = async () => {
         onClose()
-        userJobSelected()
+        try {
+            const requestBody = {
+                selectedJobIndex: selectedJobIndex,
+                threadId: threadId
+            };
+
+            const response = await fetch('/ai-agent-select-job', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to process request');
+            }
+
+            const result = await response.json();
+            console.log('Agent response:', result);
+            userJobSelected(threadId)
+
+        } catch (error) {
+            console.error('Error calling agent:', error);
+
+        }
     }
 
     return (
-        <Dialog 
-            open={open} 
+        <Dialog
+            open={open}
             onClose={onClose}
             maxWidth="sm"
             fullWidth
@@ -47,18 +66,22 @@ export const JobDetailsDialog = ({ open, onClose, job, userJobSelected }: JobDet
             <Box className="p-6">
                 <Box className="flex items-start justify-between mb-4">
                     <Box className="flex items-start gap-3">
-                        <Box className="text-3xl">{job.icon}</Box>
+                        <Box className="text-3xl"><img
+                            src={job.employer_logo}
+                            alt={job.employer_name}
+                            className="w-full h-full object-contain"
+                        /></Box>
                         <Box>
                             <Typography variant="h6" fontWeight="bold">
-                                {job.title}
+                                {job.job_title}
                             </Typography>
                             <Box className="flex items-center gap-2 mt-1">
                                 <BusinessIcon fontSize="small" className="text-gray-600" />
                                 <Typography variant="body2" color="text.secondary">
-                                    {job.company}
+                                    {job.employer_name}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    • {job.location}
+                                    • {job.job_location}
                                 </Typography>
                             </Box>
                         </Box>
@@ -68,8 +91,8 @@ export const JobDetailsDialog = ({ open, onClose, job, userJobSelected }: JobDet
                     </IconButton>
                 </Box>
 
-                <Tabs 
-                    value={selectedTab} 
+                <Tabs
+                    value={selectedTab}
                     onChange={handleTabChange}
                     sx={{
                         borderBottom: 1,
@@ -89,7 +112,7 @@ export const JobDetailsDialog = ({ open, onClose, job, userJobSelected }: JobDet
                                 About the Role
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                {job.description}
+                                {job.job_description}
                             </Typography>
                         </Box>
                     )}
@@ -100,7 +123,7 @@ export const JobDetailsDialog = ({ open, onClose, job, userJobSelected }: JobDet
                                 Key Responsibilities
                             </Typography>
                             <Box component="ul" className="pl-5 space-y-2 mt-3" sx={{ listStyleType: 'disc' }}>
-                                {job.responsibilities.map((item, index) => (
+                                {job.job_highlights?.Responsibilities.map((item, index) => (
                                     <li key={index}>
                                         <Typography variant="body2" color="text.secondary">
                                             {item}
@@ -117,7 +140,7 @@ export const JobDetailsDialog = ({ open, onClose, job, userJobSelected }: JobDet
                                 Qualifications
                             </Typography>
                             <Box component="ul" className="pl-5 space-y-2 mt-3" sx={{ listStyleType: 'disc' }}>
-                                {job.requirements.map((item, index) => (
+                                {job.job_highlights?.Qualifications?.map((item, index) => (
                                     <li key={index}>
                                         <Typography variant="body2" color="text.secondary">
                                             {item}
@@ -130,14 +153,14 @@ export const JobDetailsDialog = ({ open, onClose, job, userJobSelected }: JobDet
                 </DialogContent>
 
                 <DialogActions sx={{ p: 0, mt: 4 }}>
-                    <Button 
+                    <Button
                         onClick={onClose}
                         variant="outlined"
                         sx={{ textTransform: 'none' }}
                     >
                         Cancel
                     </Button>
-                    <Button 
+                    <Button
                         variant="contained"
                         sx={{
                             backgroundColor: '#2563EB',

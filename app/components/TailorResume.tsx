@@ -5,33 +5,33 @@ import { Watch } from "react-loader-spinner"
 import { SuccessAnimation } from "./successAnimation"
 
 export const TailorResume = () => {
-    const [showSpinner, setShowSpinner] = useState(true)
+    // const [showSpinner, setShowSpinner] = useState(true)
 
-    useEffect(() => {
-        setTimeout(() => {
-            setShowSpinner(false)
-        }, 8000)
-    }, [])
+    // useEffect(() => {
+    //     setTimeout(() => {
+    //         setShowSpinner(false)
+    //     }, 8000)
+    // }, [])
 
     return (
         <>
-            {showSpinner ? (
-                <Box className="flex flex-col items-center gap-2 justify-center" sx={{ height: 'calc(100vh - 80px)' }}>
-                    <Watch
-                        visible={true}
-                        height="80"
-                        width="80"
-                        radius="48"
-                        color="#2563EB"
-                        ariaLabel="watch-loading"
-                        wrapperStyle={{}}
-                        wrapperClass=""
-                    />
-                    <Typography variant="body2" color="text.secondary">
-                        Tailoring your resume...
-                    </Typography>
-                </Box>
-            ) : (
+            {/* {showSpinner ? (
+                // <Box className="flex flex-col items-center gap-2 justify-center" sx={{ height: 'calc(100vh - 80px)' }}>
+                //     <Watch
+                //         visible={true}
+                //         height="80"
+                //         width="80"
+                //         radius="48"
+                //         color="#2563EB"
+                //         ariaLabel="watch-loading"
+                //         wrapperStyle={{}}
+                //         wrapperClass=""
+                //     />
+                //     <Typography variant="body2" color="text.secondary">
+                //         Tailoring your resume...
+                //     </Typography>
+                // </Box>
+            ) : ( */}
                 <Box className="flex items-center justify-center w-screen mt-10 mb-10">
                     <Box className="w-[800px]">
                         <Box className="mb-6 flex flex-col gap-2 items-center">
@@ -117,7 +117,7 @@ export const TailorResume = () => {
                         </Box>
                     </Box>
                 </Box>
-            )}
+            {/* )} */}
         </>
     )
 }
