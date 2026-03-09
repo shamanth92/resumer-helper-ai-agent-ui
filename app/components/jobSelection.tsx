@@ -1,8 +1,10 @@
 "use client"
-import { Box, Typography, Card, TextField, Button, Select, MenuItem, ToggleButton, ToggleButtonGroup, CircularProgress } from "@mui/material"
+import { Box, Typography, Card, TextField, Button, ToggleButton, ToggleButtonGroup } from "@mui/material"
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
+import { Watch } from "react-loader-spinner";
+import { LOADING_STATES } from "../util/loadingStates";
 
 interface JobSelectionForm {
     resume: string;
@@ -19,6 +21,7 @@ export interface JobMatchesData {
 
 export const JobSelection = ({ setJobMatches }: { setJobMatches: (value: JobMatchesData) => void }) => {
     const [showProgress, setShowProgress] = useState(false);
+    const [agentLoadingStatus, setAgentLoadingStatus] = useState('Loading...');
 
     const { control, handleSubmit, formState: { errors } } = useForm<JobSelectionForm>({
         defaultValues: {
@@ -34,11 +37,11 @@ export const JobSelection = ({ setJobMatches }: { setJobMatches: (value: JobMatc
         setShowProgress(true);
 
         try {
-            const requestBody = { 
-                resumeText: data.resume, 
-                job: data.jobTitle, 
-                jobType: data.jobType[0], 
-                jobLocation: data.location 
+            const requestBody = {
+                resumeText: data.resume,
+                job: data.jobTitle,
+                jobType: data.jobType[0],
+                jobLocation: data.location
             };
 
             const response = await fetch('/ai-agent', {
@@ -60,7 +63,8 @@ export const JobSelection = ({ setJobMatches }: { setJobMatches: (value: JobMatc
                     const getAgentStatus = await fetch(`/ai-agent?threadId=${result.threadId}`);
                     const agentStatus = await getAgentStatus.json();
                     console.log('Agent status:', agentStatus);
-                    
+                    setAgentLoadingStatus(agentStatus?.status || 'Loading...');
+
                     if (agentStatus?.status === 'waiting_for_input') {
                         setJobMatches({
                             threadId: result.threadId,
@@ -235,7 +239,21 @@ export const JobSelection = ({ setJobMatches }: { setJobMatches: (value: JobMatc
                         >
                             Find Matching Jobs
                         </Button>}
-                        {showProgress && <CircularProgress />}
+                        {showProgress && <Box className="flex  gap-3 ">
+                            <Watch
+                                visible={true}
+                                height="40"
+                                width="40"
+                                radius="40"
+                                color="#2563EB"
+                                ariaLabel="watch-loading"
+                                wrapperStyle={{}}
+                                wrapperClass=""
+                            />
+                            <Typography variant="body2" color="text.secondary">
+                                {LOADING_STATES[agentLoadingStatus as keyof typeof LOADING_STATES]}...
+                            </Typography>
+                        </Box>}
                     </Box>
                 </Box>
             </Card>

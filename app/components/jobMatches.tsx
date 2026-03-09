@@ -6,6 +6,7 @@ import { JobDetailsDialog } from './jobDetailsDialog';
 import { useState } from 'react';
 import { TailorResume } from "./TailorResume";
 import { Watch } from "react-loader-spinner";
+import { LOADING_STATES } from "../util/loadingStates";
 
 interface Job {
     id: string;
@@ -26,6 +27,8 @@ export const JobMatches = ({ rankedJobs, threadId }: { rankedJobs: any[], thread
     const [jobSelected, setJobSelected] = useState(false)
     const [selectedJobIndex, setSelectedJobIndex] = useState<number>(0)
     const [showSpinner, setShowSpinner] = useState(true)
+    const [agentLoadingStatus, setAgentLoadingStatus] = useState<string>('')
+    const [agentData, setAgentData] = useState<any>(null)
 
 
     const getMatchColor = (percentage: number) => {
@@ -37,7 +40,7 @@ export const JobMatches = ({ rankedJobs, threadId }: { rankedJobs: any[], thread
 
     const handleViewDetails = (job: Job, index: number) => {
         setSelectedJob(job);
-        setSelectedJobIndex(index);
+        setSelectedJobIndex(index + 1);
         setDialogOpen(true);
     };
 
@@ -53,9 +56,11 @@ export const JobMatches = ({ rankedJobs, threadId }: { rankedJobs: any[], thread
                 const getAgentStatus = await fetch(`/ai-agent?threadId=${threadId}`);
                 const agentStatus = await getAgentStatus.json();
                 console.log('Agent status:', agentStatus);
+                setAgentLoadingStatus(agentStatus?.status || '');
 
                 if (agentStatus?.status === 'completed') {
                     setShowSpinner(false);
+                    setAgentData(agentStatus.data);
                     return true;
                 }
                 return false;
@@ -85,9 +90,9 @@ export const JobMatches = ({ rankedJobs, threadId }: { rankedJobs: any[], thread
                         wrapperClass=""
                     />
                     <Typography variant="body2" color="text.secondary">
-                        Tailoring your resume...
+                       {LOADING_STATES[agentLoadingStatus as keyof typeof LOADING_STATES]}...
                     </Typography>
-                </Box> : <TailorResume />) : <Box className="flex items-center justify-center w-screen mt-10 mb-10">
+                </Box> : <TailorResume agentData={agentData} />) : <Box className="flex items-center justify-center w-screen mt-10 mb-10">
             <Box className="w-[400px]">
                 <Box className="mb-6">
                     <Typography variant="h5" fontWeight="bold">Top Job Matches</Typography>
