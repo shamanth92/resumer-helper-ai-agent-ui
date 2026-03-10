@@ -123,7 +123,7 @@ export const JobDetailsDialog = ({ open, onClose, job, userJobSelected, threadId
                                 Key Responsibilities
                             </Typography>
                             <Box component="ul" className="pl-5 space-y-2 mt-3" sx={{ listStyleType: 'disc' }}>
-                                {job.job_highlights?.Responsibilities.map((item, index) => (
+                                {job.job_highlights?.Responsibilities.map((item: string, index: number) => (
                                     <li key={index}>
                                         <Typography variant="body2" color="text.secondary">
                                             {item}
@@ -140,7 +140,7 @@ export const JobDetailsDialog = ({ open, onClose, job, userJobSelected, threadId
                                 Qualifications
                             </Typography>
                             <Box component="ul" className="pl-5 space-y-2 mt-3" sx={{ listStyleType: 'disc' }}>
-                                {job.job_highlights?.Qualifications?.map((item, index) => (
+                                {job.job_highlights?.Qualifications?.map((item: string, index: number) => (
                                     <li key={index}>
                                         <Typography variant="body2" color="text.secondary">
                                             {item}
