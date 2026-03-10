@@ -1,36 +1,187 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Resume Helper AI
+
+An intelligent resume tailoring application that uses AI agents to analyze your resume, search for matching jobs, and automatically optimize your resume for specific job postings.
+
+## Features
+
+- **Resume Analysis**: Upload your resume and get AI-powered analysis
+- **Job Search**: Automatically search for relevant jobs based on your profile
+- **Gap Analysis**: Identify missing skills and keywords to improve your resume
+- **Resume Tailoring**: Generate optimized resumes tailored to specific job postings
+- **Real-time Status Updates**: Track the AI agent's progress through various stages
+- **Job Matching**: Get ranked job matches with similarity scores
+- **Download Optimized Resume**: Download your tailored resume as a DOCX
+
+## Tech Stack
+
+- **Frontend**: Next.js 14 (App Router), React, TypeScript
+- **UI Components**: Material-UI (MUI), Tailwind CSS
+- **Form Management**: React Hook Form
+- **Animations**: react-loader-spinner
+- **Backend**: Next.js API Routes
+- **AI Agent**: TypeScript backend (separate service)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ 
+- npm, yarn, pnpm, or bun
+- TypeScript backend service running on `http://localhost:5000`
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd resume-helper-ui
+```
+
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn install
+# or
+pnpm install
+```
+
+3. Run the development server:
 ```bash
 npm run dev
 # or
 yarn dev
 # or
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+app/
+├── components/
+│   ├── header.tsx              # Application header
+│   ├── jobSelection.tsx        # Job search form with React Hook Form
+│   ├── jobMatches.tsx          # Display ranked job matches
+│   ├── jobDetailsDialog.tsx    # Job details modal
+│   ├── TailorResume.tsx        # Resume tailoring results
+│   └── successAnimation.tsx    # Success animation component
+├── ai-agent/
+│   └── route.ts                # AI agent API endpoints (GET/POST)
+├── ai-agent-select-job/
+│   └── route.ts                # Job selection API endpoint
+├── util/
+│   └── loadingStates.ts        # Loading state constants
+└── page.tsx                    # Main application page
 
-## Learn More
+```
 
-To learn more about Next.js, take a look at the following resources:
+## API Endpoints
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### POST `/ai-agent`
+Start the AI agent to analyze resume and search for jobs.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Request Body:**
+```json
+{
+  "resumeText": "string",
+  "job": "string",
+  "jobType": "string",
+  "jobLocation": "string"
+}
+```
+
+**Response:**
+```json
+{
+  "threadId": "string",
+  "rankedJobs": []
+}
+```
+
+### GET `/ai-agent?threadId={threadId}`
+Poll the agent status to check progress.
+
+**Response:**
+```json
+{
+  "status": "running | parsing_resume | searching_jobs | gap_analysis | ranking_jobs | tailoring_resume | waiting_for_input | completed | failed",
+  "data": {
+    "rankedJobs": [],
+    "gapAnalysis": {
+      "matchingSkills": [],
+      "missingSkills": [],
+      "keywordsToAdd": [],
+      "experienceAlignment": "string"
+    },
+    "outputPath": "string (S3 signed URL)"
+  }
+}
+```
+
+### POST `/ai-agent-select-job`
+Select a job and trigger resume tailoring.
+
+**Request Body:**
+```json
+{
+  "threadId": "string",
+  "selectedJobIndex": "number"
+}
+```
+
+## Agent Status Flow
+
+1. **running** - Agent started
+2. **parsing_resume** - Parsing the uploaded resume
+3. **searching_jobs** - Searching for matching jobs
+4. **gap_analysis** - Performing gap analysis
+5. **ranking_jobs** - Ranking jobs by relevance
+6. **waiting_for_input** - Waiting for user to select a job
+7. **tailoring_resume** - Tailoring resume for selected job
+8. **completed** - Process completed successfully
+9. **failed** - Process failed
+
+## Key Features Implementation
+
+### Polling Mechanism
+The application uses a polling mechanism to check the AI agent's status every 3 seconds:
+- Initial polling starts after the POST request to `/ai-agent`
+- Continues until status reaches `waiting_for_input`
+- Resumes after job selection until status reaches `completed`
+
+### Gap Analysis Display
+The gap analysis shows:
+- **Matching Skills**: Skills that align with the job
+- **Missing Skills**: Skills you need to add
+- **Keywords to Add**: ATS-friendly keywords
+- **Experience Alignment**: How your experience matches
+
+### Resume Download
+The tailored resume is downloaded using a signed S3 URL provided by the backend.
+
+## Environment Variables
+
+No environment variables required for the frontend. The backend API URL is hardcoded to `http://localhost:5000`.
+
+## Build
+
+```bash
+npm run build
+# or
+yarn build
+# or
+pnpm build
+```
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The easiest way to deploy is using the [Vercel Platform](https://vercel.com/new):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Push your code to GitHub
+2. Import the repository in Vercel
+3. Configure environment variables if needed
+4. Deploy
+

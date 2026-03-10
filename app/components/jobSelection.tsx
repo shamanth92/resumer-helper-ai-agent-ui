@@ -13,6 +13,7 @@ import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { Watch } from "react-loader-spinner";
 import { LOADING_STATES } from "../util/loadingStates";
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
 interface JobSelectionForm {
   resume: string;
@@ -34,6 +35,7 @@ export const JobSelection = ({
 }) => {
   const [showProgress, setShowProgress] = useState(false);
   const [agentLoadingStatus, setAgentLoadingStatus] = useState("Loading...");
+  const [showErrorMessage, setShowErrorMessage] = useState(false);
 
   const {
     control,
@@ -50,6 +52,7 @@ export const JobSelection = ({
 
   const onSubmit = async (data: JobSelectionForm) => {
     console.log("Form data:", data);
+    setShowErrorMessage(false);
     setShowProgress(true);
 
     try {
@@ -69,7 +72,8 @@ export const JobSelection = ({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to process request");
+        setShowErrorMessage(true);
+        return;
       }
 
       const result = await response.json();
@@ -90,6 +94,11 @@ export const JobSelection = ({
               rankedJobs: agentStatus.data?.rankedJobs,
             });
             setShowProgress(false);
+            return true;
+          } 
+          if (agentStatus?.status === "failed") {
+            setShowProgress(false);
+            setShowErrorMessage(true);
             return true;
           }
           return false;
@@ -275,7 +284,7 @@ export const JobSelection = ({
                 Find Matching Jobs
               </Button>
             )}
-            {showProgress && (
+            {showProgress && !showErrorMessage && (
               <Box className="flex  gap-3 justify-center items-center h-full">
                 <Watch
                   visible={true}
@@ -294,6 +303,14 @@ export const JobSelection = ({
                     ]
                   }
                   ...
+                </Typography>
+              </Box>
+            )}
+            {showErrorMessage && (
+              <Box className="flex  gap-3 justify-center items-center h-full">
+                <Typography variant="body2" color="error">
+                  <ErrorOutlineIcon /> An error occurred while processing your
+                  request. Please try again.
                 </Typography>
               </Box>
             )}

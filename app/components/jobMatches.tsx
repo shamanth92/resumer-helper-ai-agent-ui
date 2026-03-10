@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { TailorResume } from "./TailorResume";
 import { Watch } from "react-loader-spinner";
 import { LOADING_STATES } from "../util/loadingStates";
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
 interface Job {
     id: string;
@@ -29,7 +30,7 @@ export const JobMatches = ({ rankedJobs, threadId }: { rankedJobs: any[], thread
     const [showSpinner, setShowSpinner] = useState(true)
     const [agentLoadingStatus, setAgentLoadingStatus] = useState<string>('')
     const [agentData, setAgentData] = useState<any>(null)
-
+    const [showErrorMessage, setShowErrorMessage] = useState(false)
 
     const getMatchColor = (percentage: number) => {
         console.log('percentage: ', percentage, typeof percentage)
@@ -63,6 +64,11 @@ export const JobMatches = ({ rankedJobs, threadId }: { rankedJobs: any[], thread
                     setAgentData(agentStatus.data);
                     return true;
                 }
+                if (agentStatus?.status === 'failed') {
+                    setShowSpinner(false);
+                    setShowErrorMessage(true);
+                    return true;
+                }
                 return false;
             };
 
@@ -78,7 +84,9 @@ export const JobMatches = ({ rankedJobs, threadId }: { rankedJobs: any[], thread
     }
 
     return (
-        jobSelected ? (showSpinner ? <Box className="flex flex-col items-center gap-2 justify-center" sx={{ height: 'calc(100vh - 80px)' }}>
+        jobSelected ? (
+            showSpinner ? (
+                <Box className="flex flex-col items-center gap-2 justify-center" sx={{ height: 'calc(100vh - 80px)' }}>
                     <Watch
                         visible={true}
                         height="80"
@@ -90,9 +98,22 @@ export const JobMatches = ({ rankedJobs, threadId }: { rankedJobs: any[], thread
                         wrapperClass=""
                     />
                     <Typography variant="body2" color="text.secondary">
-                       {LOADING_STATES[agentLoadingStatus as keyof typeof LOADING_STATES]}...
+                        {LOADING_STATES[agentLoadingStatus as keyof typeof LOADING_STATES]}...
                     </Typography>
-                </Box> : <TailorResume agentData={agentData} />) : <Box className="flex items-center justify-center w-screen mt-10 mb-10">
+                </Box>
+            ) : (
+                showErrorMessage ? (
+                    <Box className="flex flex-col items-center gap-2 justify-center" sx={{ height: 'calc(100vh - 80px)' }}>
+                        <Typography variant="h6" color="error" className="flex items-center gap-2">
+                            <ErrorOutlineIcon /> Failed to generate resume. Please try again.
+                        </Typography>
+                    </Box>
+                ) : (
+                    <TailorResume agentData={agentData} />
+                )
+            )
+        ) : (
+            <Box className="flex items-center justify-center w-screen mt-10 mb-10">
             <Box className="w-[400px]">
                 <Box className="mb-6">
                     <Typography variant="h5" fontWeight="bold">Top Job Matches</Typography>
@@ -173,5 +194,6 @@ export const JobMatches = ({ rankedJobs, threadId }: { rankedJobs: any[], thread
                 />
             )}
         </Box>
-        );
+        )
+    );
 };
