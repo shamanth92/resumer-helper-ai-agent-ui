@@ -164,7 +164,7 @@ The tailored resume is downloaded using a signed S3 URL provided by the backend.
 
 ## Environment Variables
 
-No environment variables required for the frontend. The backend API URL is hardcoded to `http://localhost:5000`.
+Add the environment variable for the backend API URL - AGENT_URL=https://resume-helper-agent.onrender.com
 
 ## Build
 
